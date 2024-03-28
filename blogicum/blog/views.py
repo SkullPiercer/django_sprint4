@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.views.generic import (
     ListView, CreateView, UpdateView, DeleteView, DetailView
 )
+from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 
@@ -46,17 +47,6 @@ class PostDeleteView(LoginRequiredMixin, DetailView):
         return context
 
 
-@login_required
-def add_comment(request, pk):
-    post = get_object_or_404(Post, pk=pk)
-    form = CommentForm(request.POST)
-    if form.is_valid():
-        comment = form.save()
-        comment.author = request.user
-        comment.save()
-    return redirect('blog:post_detail', pk=pk)
-
-
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
     form_class = PostForm
@@ -75,9 +65,11 @@ class ProfileDetailView(DetailView):
     slug_field = 'username'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data()
+        context = super().get_context_data(**kwargs)
         user = self.object
-        context['page_obj'] = Post.objects.filter(author=user)
+        posts = Post.objects.filter(author=user)
+        annotated_posts = posts.annotate(comment_count=Count('comment'))
+        context['page_obj'] = annotated_posts
         context['profile'] = user
         return context
 
@@ -90,9 +82,7 @@ class PostDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['form'] = CommentForm()
-        context['comment'] = (
-            self.object.comment.select_related('author')
-        )
+        context['comments'] = self.object.comment.all()
         return context
 
 
@@ -114,13 +104,27 @@ class CommentCreateView(CreateView):
         return reverse('blog:post_detail', kwargs={'post_id': self.kwargs['post_id']})
 
 
-def get_published_posts(post):
-    queryset = post.filter(
-        pub_date__lte=timezone.now(),
-        is_published=True,
-        category__is_published=True
-    )
-    return queryset
+class CommentUpdateView(UpdateView):
+    model = Comment
+    form_class = CommentForm
+    template_name = 'blog/comment.html'
+    pk_url_kwarg = 'comment_id'
+    success_url = reverse_lazy('blog:post_detail')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form'] = PostForm(instance=self.get_object())
+        return context
+
+
+class CommentDeleteView(DeleteView):
+    model = Comment
+    form_class = CommentForm
+    template_name = 'blog/comment.html'
+    pk_url_kwarg = 'comment_id'
+
+    def get_success_url(self):
+        return reverse('blog:post_detail', kwargs={'post_id': self.object.post.pk})
 
 
 class PostListView(ListView):
@@ -131,7 +135,8 @@ class PostListView(ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().filter(author__isnull=False)
-        return queryset
+        annotated_queryset = queryset.annotate(comment_count=Count('comment'))
+        return annotated_queryset
 
 
 class CategoryListView(ListView):
@@ -155,18 +160,3 @@ class CategoryListView(ListView):
         category = get_object_or_404(Category, slug=category_slug)
         context['category'] = category
         return context
-
-
-def category_posts(request, category_slug):
-    template = 'blog/category.html'
-    category = get_object_or_404(
-        Category,
-        slug=category_slug,
-        is_published=True
-    )
-    posts = get_published_posts(category.category_post)
-    context = {
-        'category': category,
-        'post_list': posts
-    }
-    return render(request, template, context)
