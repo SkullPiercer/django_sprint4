@@ -72,20 +72,42 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
 
 
-class ProfileDetailView(DetailView):
-    model = User
+# class ProfileDetailView(DetailView):
+#     model = User
+#     template_name = 'blog/profile.html'
+#     slug_url_kwarg = 'username'
+#     slug_field = 'username'
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         user = self.object
+#         posts = Post.objects.filter(author=user)
+#         annotated_posts = posts.annotate(comment_count=Count('comment'))
+#         context['page_obj'] = annotated_posts
+#         context['profile'] = user
+#         return context
+
+
+class ProfileListView(ListView):
+    model = Post
     template_name = 'blog/profile.html'
     slug_url_kwarg = 'username'
     slug_field = 'username'
+    paginate_by = 10
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.object
-        posts = Post.objects.filter(author=user)
-        annotated_posts = posts.annotate(comment_count=Count('comment'))
-        context['page_obj'] = annotated_posts
+        username = self.kwargs.get(self.slug_url_kwarg)
+        user = User.objects.filter(username=username).first()
         context['profile'] = user
         return context
+
+    def get_queryset(self):
+        username = self.kwargs.get(self.slug_url_kwarg)
+        user = User.objects.filter(username=username).first()
+        queryset = super().get_queryset().filter(author=user)
+        annotated_queryset = queryset.annotate(comment_count=Count('comment'))
+        return annotated_queryset
 
 
 class PostDetailView(DetailView):
