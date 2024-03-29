@@ -146,8 +146,7 @@ class PostDetailView(DetailView):
                 or (not obj.category.is_published
                     and self.request.user != obj.author) \
                 or (not obj.pub_date <= now
-                    and self.request.user != obj.author
-        ):
+                    and self.request.user != obj.author):
             raise Http404("Страница не найдена")
         return obj
 
