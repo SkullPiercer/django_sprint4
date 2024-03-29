@@ -1,14 +1,14 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.generic import (
     ListView, CreateView, UpdateView, DeleteView, DetailView
 )
-from django.db.models import Count
-from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .models import Post, Category, User, Comment
 from .forms import PostForm, CommentForm, ProfileChangeForm
+from .models import Post, Category, User, Comment
 
 
 class ProfileEditView(LoginRequiredMixin, UpdateView):
@@ -78,16 +78,12 @@ class ProfileListView(ListView):
     slug_field = 'username'
     paginate_by = 10
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        username = self.kwargs.get(self.slug_url_kwarg)
-        user = User.objects.filter(username=username).first()
-        context['profile'] = user
-        return context
-
     def get_queryset(self):
-        username = self.kwargs.get(self.slug_url_kwarg)
-        user = User.objects.filter(username=username).first()
+
+        user = get_object_or_404(
+            User,
+            username=self.kwargs.get(self.slug_url_kwarg)
+        )
         queryset = super().get_queryset().filter(author=user)
         if self.request.user != user:
             now = timezone.now()
@@ -97,6 +93,13 @@ class ProfileListView(ListView):
             )
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['profile'] = get_object_or_404(
+            User,
+            username=self.kwargs.get(self.slug_url_kwarg))
+        return context
 
 
 class PostDetailView(DetailView):
