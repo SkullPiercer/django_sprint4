@@ -79,6 +79,9 @@ class Post(PublishedModel):
         verbose_name_plural = 'Публикации'
         ordering = ['-pub_date', ]
 
+    def __str__(self):
+        return self.title
+
 
 class Comment(PublishedModel):
     text = models.TextField('Введите текст комментария')

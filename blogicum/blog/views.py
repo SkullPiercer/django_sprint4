@@ -1,5 +1,5 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Count
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
@@ -28,7 +28,7 @@ class ProfileEditView(LoginRequiredMixin, UpdateView):
         return reverse('blog:profile', kwargs={'username': slug})
 
 
-class PostUpdateView(LoginRequiredMixin, UpdateView):
+class PostUpdateView(UserPassesTestMixin, UpdateView):
     model = Post
     form_class = PostForm
     template_name = 'blog/create.html'
@@ -77,6 +77,7 @@ class ProfileListView(ListView):
     slug_url_kwarg = 'username'
     slug_field = 'username'
     paginate_by = 10
+    ordering = ['-pub_date']
 
     def get_queryset(self):
 
@@ -90,7 +91,11 @@ class ProfileListView(ListView):
             queryset = queryset.filter(
                 is_published=True,
                 pub_date__lte=now,
+                category__is_published=True
             )
+        else:
+            queryset = queryset.filter(
+                Q(category__is_published=True) | Q(category__isnull=True) | Q(category__is_published=False))
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
 
@@ -132,7 +137,7 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         return reverse('blog:post_detail', kwargs={'post_id': self.kwargs['post_id']})
 
 
-class CommentUpdateView(LoginRequiredMixin, UpdateView):
+class CommentUpdateView(UserPassesTestMixin, UpdateView):
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
@@ -149,7 +154,7 @@ class CommentUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class CommentDeleteView(LoginRequiredMixin, DeleteView):
+class CommentDeleteView(UserPassesTestMixin, DeleteView):
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment.html'
@@ -165,7 +170,7 @@ class CommentDeleteView(LoginRequiredMixin, DeleteView):
 
 class PostListView(ListView):
     model = Post
-    ordering = 'category'
+    ordering = ['-pub_date']
     paginate_by = 10
     template_name = 'blog/index.html'
 
@@ -174,7 +179,8 @@ class PostListView(ListView):
         queryset = super().get_queryset().filter(
             author__isnull=False,
             pub_date__lte=now,
-            is_published=True
+            is_published=True,
+            category__is_published=True
         )
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
@@ -184,6 +190,7 @@ class CategoryListView(ListView):
     model = Post
     paginate_by = 10
     template_name = 'blog/category.html'
+    ordering = ['-pub_date']
 
     def get_queryset(self):
         category_slug = self.kwargs.get('category_slug')
