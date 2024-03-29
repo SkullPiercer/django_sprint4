@@ -6,7 +6,6 @@ from django.views.generic import (
 )
 from django.db.models import Count
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.paginator import Paginator
 
 from .models import Post, Category, User, Comment
 from .forms import PostForm, CommentForm, ProfileChangeForm
@@ -70,22 +69,6 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
-
-
-# class ProfileDetailView(DetailView):
-#     model = User
-#     template_name = 'blog/profile.html'
-#     slug_url_kwarg = 'username'
-#     slug_field = 'username'
-#
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         user = self.object
-#         posts = Post.objects.filter(author=user)
-#         annotated_posts = posts.annotate(comment_count=Count('comment'))
-#         context['page_obj'] = annotated_posts
-#         context['profile'] = user
-#         return context
 
 
 class ProfileListView(ListView):
@@ -178,7 +161,10 @@ class PostListView(ListView):
     template_name = 'blog/index.html'
 
     def get_queryset(self):
-        queryset = super().get_queryset().filter(author__isnull=False)
+        queryset = super().get_queryset().filter(
+            author__isnull=False,
+            pub_date__lte=timezone.now()
+        )
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
 
@@ -194,7 +180,8 @@ class CategoryListView(ListView):
         queryset = super().get_queryset().filter(
             category=category,
             is_published=True,
-            author__isnull=False
+            author__isnull=False,
+            pub_date__lte=timezone.now()
         ).annotate(comment_count=Count('comment'))
         return queryset
 
