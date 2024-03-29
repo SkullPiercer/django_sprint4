@@ -70,7 +70,7 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def test_func(self):
         post = self.get_object()
-        return self.request.user == post.author\
+        return self.request.user == post.author \
             or self.request.user.is_superuser
 
     def handle_no_permission(self):
@@ -142,9 +142,11 @@ class PostDetailView(DetailView):
     def get_object(self, queryset=None):
         obj = super().get_object(queryset=queryset)
         now = timezone.now()
-        if (not obj.is_published and self.request.user != obj.author) or (
-                not obj.category.is_published and self.request.user != obj.author) or (
-                not obj.pub_date <= now and self.request.user != obj.author
+        if (not obj.is_published and self.request.user != obj.author) \
+                or (not obj.category.is_published
+                    and self.request.user != obj.author) \
+                or (not obj.pub_date <= now
+                    and self.request.user != obj.author
         ):
             raise Http404("Страница не найдена")
         return obj
@@ -196,7 +198,9 @@ class CommentUpdateView(UserPassesTestMixin, UpdateView):
         return self.request.user == comment.author
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.object.post.pk})
+        return reverse(
+            'blog:post_detail', kwargs={'post_id': self.object.post.pk}
+        )
 
 
 class CommentDeleteView(UserPassesTestMixin, DeleteView):
@@ -210,7 +214,9 @@ class CommentDeleteView(UserPassesTestMixin, DeleteView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.object.post.pk})
+        return reverse(
+            'blog:post_detail', kwargs={'post_id': self.object.post.pk}
+        )
 
     def test_func(self):
         comment = self.get_object()
