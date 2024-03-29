@@ -119,9 +119,9 @@ class ProfileListView(ListView):
             )
         else:
             queryset = queryset.filter(
-                Q(category__is_published=True) |
-                Q(category__isnull=True) |
-                Q(category__is_published=False)
+                Q(category__is_published=True)
+                | Q(category__isnull=True)
+                | Q(category__is_published=False)
             )
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
