@@ -89,6 +89,12 @@ class ProfileListView(ListView):
         username = self.kwargs.get(self.slug_url_kwarg)
         user = User.objects.filter(username=username).first()
         queryset = super().get_queryset().filter(author=user)
+        if self.request.user != user:
+            now = timezone.now()
+            queryset = queryset.filter(
+                is_published=True,
+                pub_date__lte=now,
+            )
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
 
@@ -161,9 +167,11 @@ class PostListView(ListView):
     template_name = 'blog/index.html'
 
     def get_queryset(self):
+        now = timezone.now()
         queryset = super().get_queryset().filter(
             author__isnull=False,
-            pub_date__lte=timezone.now()
+            pub_date__lte=now,
+            is_published=True
         )
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
