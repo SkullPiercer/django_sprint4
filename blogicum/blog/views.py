@@ -119,7 +119,10 @@ class ProfileListView(ListView):
             )
         else:
             queryset = queryset.filter(
-                Q(category__is_published=True) | Q(category__isnull=True) | Q(category__is_published=False))
+                Q(category__is_published=True) |
+                Q(category__isnull=True) |
+                Q(category__is_published=False)
+            )
         annotated_queryset = queryset.annotate(comment_count=Count('comment'))
         return annotated_queryset
 
@@ -168,7 +171,9 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse('blog:post_detail', kwargs={'post_id': self.kwargs['post_id']})
+        return reverse(
+            'blog:post_detail', kwargs={'post_id': self.kwargs['post_id']}
+        )
 
 
 class CommentUpdateView(UserPassesTestMixin, UpdateView):
