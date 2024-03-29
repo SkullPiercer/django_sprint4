@@ -45,7 +45,9 @@ class PostUpdateView(UserPassesTestMixin, UpdateView):
 
     def handle_no_permission(self):
         post_id = self.kwargs.get('post_id')
-        return HttpResponseRedirect(reverse('blog:post_detail', kwargs={'post_id': post_id}))
+        return HttpResponseRedirect(
+            reverse('blog:post_detail', kwargs={'post_id': post_id})
+        )
 
     def get_success_url(self):
         return reverse('blog:post_detail', kwargs={'post_id': self.object.pk})
@@ -68,11 +70,14 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def test_func(self):
         post = self.get_object()
-        return self.request.user == post.author or self.request.user.is_superuser
+        return self.request.user == post.author\
+            or self.request.user.is_superuser
 
     def handle_no_permission(self):
         post_id = self.kwargs.get('post_id')
-        return HttpResponseRedirect(reverse('blog:post_detail', kwargs={'post_id': post_id}))
+        return HttpResponseRedirect(
+            reverse('blog:post_detail', kwargs={'post_id': post_id})
+        )
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
@@ -85,7 +90,9 @@ class PostCreateView(LoginRequiredMixin, CreateView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('blog:profile', kwargs={'username': self.request.user.username})
+        return reverse_lazy(
+            'blog:profile', kwargs={'username': self.request.user.username}
+        )
 
 
 class ProfileListView(ListView):
