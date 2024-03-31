@@ -47,7 +47,7 @@ class ProfileListView(ListView):
         )
         queryset = super().get_queryset().filter(author=user)
         if self.request.user != user:
-            queryset = super().get_queryset()
+            queryset = queryset.filter(category__is_published=True,is_published=True)
         else:
             queryset = queryset.filter(
                 Q(category__is_published=True)
@@ -137,12 +137,16 @@ class PostDetailView(DetailView):
     pk_url_kwarg = 'post_id'
 
     def get_object(self, queryset=None):
-        obj = get_object_or_404(
-            Post,
-            id=self.kwargs.get(self.pk_url_kwarg),
-            pub_date__lte=timezone.now()
-        )
-        return obj
+        post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        if self.request.user == post.author:
+            return post
+        return get_object_or_404(Post.objects.filter(
+            author__isnull=False,
+            pub_date__lte=timezone.now(),
+            is_published=True,
+            category__is_published=True,
+            pk=self.kwargs['post_id']
+        ))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -192,7 +196,7 @@ class CommentDeleteView(UserPassesTestMixin, CommentMixin, DeleteView):
         return self.request.user == comment.author
 
 
-class CategoryListView(ListView):
+class CategoryListView(QuerySetMixin, ListView):
     model = Post
     paginate_by = POSTS_ON_PAGE
     template_name = 'blog/category.html'
