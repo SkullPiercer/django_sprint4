@@ -106,8 +106,8 @@ class PostDeleteView(UserPassesTestMixin, DeleteView):
 
     def test_func(self):
         post = self.get_object()
-        return (self.request.user == post.author or
-                self.request.user.is_superuser)
+        return (self.request.user == post.author
+                or self.request.user.is_superuser)
 
     def handle_no_permission(self):
         post_id = self.kwargs.get('post_id')
@@ -215,5 +215,9 @@ class CategoryListView(ListView):
 
     def dispatch(self, request, *args, **kwargs):
         category_slug = self.kwargs.get('category_slug')
-        category = get_object_or_404(Category, is_published=True, slug=category_slug)
+        get_object_or_404(
+            Category,
+            is_published=True,
+            slug=category_slug
+        )
         return super().dispatch(request, *args, **kwargs)
