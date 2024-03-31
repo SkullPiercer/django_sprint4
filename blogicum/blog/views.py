@@ -9,8 +9,8 @@ from django.views.generic import (
 )
 
 from .forms import PostForm, CommentForm, ProfileChangeForm
+from .mixins import CommentMixin, QuerySetMixin
 from .models import Post, Category, User
-from .mixins import CommentMixin
 
 POSTS_ON_PAGE = 10
 
@@ -47,12 +47,7 @@ class ProfileListView(ListView):
         )
         queryset = super().get_queryset().filter(author=user)
         if self.request.user != user:
-            now = timezone.now()
-            queryset = queryset.filter(
-                is_published=True,
-                pub_date__lte=now,
-                category__is_published=True
-            )
+            queryset = super().get_queryset()
         else:
             queryset = queryset.filter(
                 Q(category__is_published=True)
@@ -156,21 +151,11 @@ class PostDetailView(DetailView):
         return context
 
 
-class PostListView(ListView):
+class PostListView(QuerySetMixin, ListView):
     model = Post
     ordering = ['-pub_date']
     paginate_by = POSTS_ON_PAGE
     template_name = 'blog/index.html'
-
-    def get_queryset(self):
-        now = timezone.now()
-        queryset = super().get_queryset().filter(
-            author__isnull=False,
-            pub_date__lte=now,
-            is_published=True,
-            category__is_published=True
-        )
-        return queryset.annotate(comment_count=Count('comment'))
 
 
 class CommentCreateView(LoginRequiredMixin, CommentMixin, CreateView):
@@ -218,11 +203,8 @@ class CategoryListView(ListView):
         category = get_object_or_404(Category, slug=category_slug)
         queryset = super().get_queryset().filter(
             category=category,
-            is_published=True,
-            author__isnull=False,
-            pub_date__lte=timezone.now()
-        ).annotate(comment_count=Count('comment'))
-        return queryset
+        )
+        return queryset.annotate(comment_count=Count('comment'))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
