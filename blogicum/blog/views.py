@@ -47,7 +47,10 @@ class ProfileListView(ListView):
         )
         queryset = super().get_queryset().filter(author=user)
         if self.request.user != user:
-            queryset = queryset.filter(category__is_published=True,is_published=True)
+            queryset = queryset.filter(
+                category__is_published=True,
+                is_published=True
+            )
         else:
             queryset = queryset.filter(
                 Q(category__is_published=True)
