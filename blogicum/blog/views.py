@@ -142,15 +142,15 @@ class PostDetailView(DetailView):
         base_query = Post.objects.filter(pk=self.kwargs['post_id'])
         if self.request.user.is_authenticated:
             condition = Q(author=self.request.user) | (
-                    Q(pub_date__lte=timezone.now())
-                    & Q(is_published=True)
-                    & Q(category__is_published=True)
+                Q(pub_date__lte=timezone.now())
+                & Q(is_published=True)
+                & Q(category__is_published=True)
             )
         else:
             condition = (
-                    Q(pub_date__lte=timezone.now())
-                    & Q(is_published=True)
-                    & Q(category__is_published=True)
+                Q(pub_date__lte=timezone.now())
+                & Q(is_published=True)
+                & Q(category__is_published=True)
             )
         return get_object_or_404(base_query.filter(condition))
 
