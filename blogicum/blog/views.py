@@ -57,8 +57,7 @@ class ProfileListView(ListView):
                 | Q(category__isnull=True)
                 | Q(category__is_published=False)
             )
-        annotated_queryset = queryset.annotate(comment_count=Count('comment'))
-        return annotated_queryset
+        return queryset.annotate(comment_count=Count('comment'))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -140,16 +139,20 @@ class PostDetailView(DetailView):
     pk_url_kwarg = 'post_id'
 
     def get_object(self, queryset=None):
-        post = get_object_or_404(Post, pk=self.kwargs['post_id'])
-        if self.request.user == post.author:
-            return post
-        return get_object_or_404(Post.objects.filter(
-            author__isnull=False,
-            pub_date__lte=timezone.now(),
-            is_published=True,
-            category__is_published=True,
-            pk=self.kwargs['post_id']
-        ))
+        base_query = Post.objects.filter(pk=self.kwargs['post_id'])
+        if self.request.user.is_authenticated:
+            condition = Q(author=self.request.user) | (
+                    Q(pub_date__lte=timezone.now())
+                    & Q(is_published=True)
+                    & Q(category__is_published=True)
+            )
+        else:
+            condition = (
+                    Q(pub_date__lte=timezone.now())
+                    & Q(is_published=True)
+                    & Q(category__is_published=True)
+            )
+        return get_object_or_404(base_query.filter(condition))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
